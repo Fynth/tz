@@ -37,35 +37,45 @@ func NewSubscriptionHandler(repo *repository.SubscriptionRepository) *Subscripti
 // @Failure 500 {object} map[string]string "Внутренняя ошибка сервера"
 // @Router /subscriptions [post]
 func (h *SubscriptionHandler) Create(w http.ResponseWriter, r *http.Request) {
-	var sub models.Subscription
+	var subsModel models.Subscription
+
+	var sub struct {
+		ServiceName string `json:"service_name"`
+		Price       int    `json:"price"`
+		UserId      string `json:"user_id"`
+		StartDate   string `json:"start_date"`
+	}
 
 	if err := json.NewDecoder(r.Body).Decode(&sub); err != nil {
 		log.Warn().Err(err).Msg("Invalid JSON")
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
-	if sub.StartDate != "" {
-		_, err := time.Parse("01-2006", sub.StartDate)
-		if err != nil {
-			log.Warn().Err(err).Msg("Validation error")
-			http.Error(w, "Validation Error", http.StatusBadRequest)
-			return
-		}
-	}
-	if err := h.validator.Struct(sub); err != nil {
+	timeSub, err := time.Parse("01-2006", sub.StartDate)
+	if err != nil {
 		log.Warn().Err(err).Msg("Validation error")
 		http.Error(w, "Validation Error", http.StatusBadRequest)
 		return
 	}
 
-	_, err := uuid.Parse(sub.UserId)
+	if err := h.validator.Struct(sub); err != nil {
+		log.Warn().Err(err).Msg("Validation error")
+		http.Error(w, "Validation Error", http.StatusBadRequest)
+		return
+	}
+	_, err = uuid.Parse(sub.UserId)
 	if err != nil {
 		log.Warn().Err(err).Msg("UUID is invalid")
 		http.Error(w, "UUID is invalid", http.StatusBadRequest)
 		return
 	}
 
-	created, err := h.repo.Create(r.Context(), &sub)
+	subsModel.Price = sub.Price
+	subsModel.ServiceName = sub.ServiceName
+	subsModel.UserId = sub.UserId
+	subsModel.StartDate = timeSub
+
+	created, err := h.repo.Create(r.Context(), &subsModel)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to create subscription")
 		http.Error(w, "Internal server Error", http.StatusInternalServerError)
@@ -134,14 +144,6 @@ func (h *SubscriptionHandler) Update(w http.ResponseWriter, r *http.Request) {
 		log.Warn().Err(err).Msg("Invalid JSON")
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
-	}
-	if sub.StartDate != "" {
-		_, err := time.Parse("01-2006", sub.StartDate)
-		if err != nil {
-			log.Warn().Err(err).Msg("Validation error")
-			http.Error(w, "Validation Error", http.StatusBadRequest)
-			return
-		}
 	}
 	if err := h.validator.Struct(sub); err != nil {
 		log.Warn().Err(err).Msg("Validation error")
@@ -235,15 +237,10 @@ func (h *SubscriptionHandler) Total(w http.ResponseWriter, r *http.Request) {
 	startPeriod := params.Get("start_period")
 	endPeriod := params.Get("end_period")
 
-	if startPeriod == "" || endPeriod == "" {
-		http.Error(w, "start_period and end_period are required", http.StatusBadRequest)
-		return
-	}
-
 	userID := params.Get("user_id")
 	serviceName := params.Get("service_name")
 
-	total, err := h.repo.CalculateTotal(r.Context(), startPeriod, userID, serviceName)
+	total, err := h.repo.CalculateTotal(r.Context(), startPeriod, endPeriod, userID, serviceName)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to calculate total")
 		http.Error(w, "Internal server error", http.StatusInternalServerError)

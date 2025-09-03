@@ -37,5 +37,15 @@ services:
         condition: service_healthy
     restart: on-failure
 
+    command: >
+      sh -c "
+        echo '⏳ Waiting for PostgreSQL...' &&
+        sleep 5 &&
+        echo '✅ Applying migrations...' &&
+        migrate -path ./migrations -database 'postgres://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?sslmode=disable' up &&
+        echo '🚀 Starting server...' &&
+        ./server
+      "
+
 volumes:
   postgres_data:
