@@ -218,3 +218,38 @@ func (h *SubscriptionHandler) List(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusFound)
 	json.NewEncoder(w).Encode(list)
 }
+
+// @Summary Рассчитать общую стоимость подписок
+// @Description Возвращает сумму стоимости всех активных подписок за указанный период с фильтрацией
+// @Tags subscriptions
+// @Produce json
+// @Param start_period query string true "Начало периода (MM-YYYY)"
+// @Param user_id query string false "ID пользователя (UUID)"
+// @Param service_name query string false "Название сервиса"\
+// @Failure 400 {string} string "start_period обязателен"
+// @Failure 500 {string} string "Внутренняя ошибка"
+// @Router /subscriptions/total [get]
+func (h *SubscriptionHandler) Total(w http.ResponseWriter, r *http.Request) {
+	params := r.URL.Query()
+
+	startPeriod := params.Get("start_period")
+	endPeriod := params.Get("end_period")
+
+	if startPeriod == "" || endPeriod == "" {
+		http.Error(w, "start_period and end_period are required", http.StatusBadRequest)
+		return
+	}
+
+	userID := params.Get("user_id")
+	serviceName := params.Get("service_name")
+
+	total, err := h.repo.CalculateTotal(r.Context(), startPeriod, userID, serviceName)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to calculate total")
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(total)
+}

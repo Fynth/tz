@@ -43,6 +43,7 @@ func main() {
 	r.HandleFunc("/subs/{id}/", handler.Retrieve).Methods("GET")
 	r.HandleFunc("/subs/{id}/", handler.Update).Methods("PUT")
 	r.HandleFunc("/subs/{id}/", handler.Delete).Methods("DELETE")
+	r.HandleFunc("/subs/total", handler.Total).Methods("GET")
 
 	log.Info()
 	http.ListenAndServe(":8080", r)

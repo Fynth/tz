@@ -2,8 +2,12 @@ package repository
 
 import (
 	"context"
+	"database/sql"
+	"fmt"
+	"time"
 	"tz/internal/models"
 
+	"github.com/rs/zerolog/log"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -67,4 +71,33 @@ func (sr *SubscriptionRepository) List(ctx context.Context, subs *[]models.Subsc
 		return nil, err
 	}
 	return subs, nil
+}
+
+func (r *SubscriptionRepository) CalculateTotal(
+	ctx context.Context,
+	startPeriod, userID, serviceName string,
+) (int, error) {
+	startDate, err := time.Parse("01-2006", startPeriod)
+	if err != nil {
+		log.Error().Err(err)
+		return 0, fmt.Errorf("invalid start_period format: %w", err)
+	}
+
+	var total sql.NullInt64
+	err = r.Db.WithContext(ctx).Model(&models.Subscription{}).
+		Where("start_date = ?", startDate).
+		Where("user_id = ?", userID).
+		Where("service_name = ?", serviceName).
+		Select("COALESCE(SUM(price), 0)").
+		Scan(&total).Error
+
+	if err != nil {
+		log.Error().Err(err)
+		return 0, err
+	}
+
+	if total.Valid {
+		return int(total.Int64), nil
+	}
+	return 0, nil
 }

@@ -179,4 +179,36 @@ paths:
       summary: Обновить подписку
       tags:
       - subscriptions
+  /subscriptions/total:
+    get:
+      description: Возвращает сумму стоимости всех активных подписок за указанный
+        период с фильтрацией
+      parameters:
+      - description: Начало периода (MM-YYYY)
+        in: query
+        name: start_period
+        required: true
+        type: string
+      - description: ID пользователя (UUID)
+        in: query
+        name: user_id
+        type: string
+      - description: Название сервиса
+        in: query
+        name: service_name
+        type: string
+      produces:
+      - application/json
+      responses:
+        "400":
+          description: start_period обязателен
+          schema:
+            type: string
+        "500":
+          description: Внутренняя ошибка
+          schema:
+            type: string
+      summary: Рассчитать общую стоимость подписок
+      tags:
+      - subscriptions
 swagger: "2.0"
