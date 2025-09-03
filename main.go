@@ -40,10 +40,10 @@ func main() {
 	r.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
 	r.HandleFunc("/subs/", handler.Create).Methods("POST")
 	r.HandleFunc("/subs/", handler.List).Methods("GET")
+	r.HandleFunc("/subs/total", handler.Total).Methods("GET")
 	r.HandleFunc("/subs/{id}/", handler.Retrieve).Methods("GET")
 	r.HandleFunc("/subs/{id}/", handler.Update).Methods("PUT")
 	r.HandleFunc("/subs/{id}/", handler.Delete).Methods("DELETE")
-	r.HandleFunc("/subs/total", handler.Total).Methods("GET")
 
 	log.Info()
 	http.ListenAndServe(":8080", r)
